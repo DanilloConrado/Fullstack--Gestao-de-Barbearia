@@ -13,28 +13,12 @@ export default function Auth() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMsg('Processando...');
-    try {
-      const endpoint = isLogin ? 'http://localhost:3000/login' : 'http://localhost:3000/usuarios';
-      const method = isLogin ? 'GET' : 'POST'; // Simulating logic based on typical /usuarios POST. Adjust according to real API.
-      
-      const config = {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-      };
-      
-      if (!isLogin) {
-        config.body = JSON.stringify(formData);
-      }
-      
-      // Se for apenas visual vitrine simulamos sucesso
-      setTimeout(() => {
-        setMsg(isLogin ? 'Login efetuado com sucesso!' : 'Usuário cadastrado com sucesso!');
-        setFormData({ nome: '', email: '' });
-      }, 1000);
-      
-    } catch (error) {
-      setMsg('Erro ao conectar com a API de usuários.');
-    }
+    
+    // Se for apenas visual vitrine simulamos sucesso
+    setTimeout(() => {
+      setMsg(isLogin ? 'Login efetuado com sucesso!' : 'Usuário cadastrado com sucesso!');
+      setFormData({ nome: '', email: '' });
+    }, 1000);
   };
 
   return (

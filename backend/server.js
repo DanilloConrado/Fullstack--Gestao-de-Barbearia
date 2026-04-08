@@ -53,6 +53,7 @@ app.get('/clientes', async (req, res) => {
         const clientes = await prisma.client.findMany();
         res.status(200).json(clientes);
     } catch (error) {
+        console.error("Erro detailed:", error);
         res.status(500).json({ error: "Erro ao buscar clientes" });
     }
 });

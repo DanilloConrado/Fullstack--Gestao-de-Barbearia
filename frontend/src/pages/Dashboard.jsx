@@ -1,19 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, PackageSearch, LogOut, Plus, Search } from 'lucide-react';
+import api from '../service/api';
+import { getActiveTab, setActiveTab, getUserName, logout } from '../service/auth';
 import './Dashboard.css';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(localStorage.getItem('barber_activeTab') || 'clients');
+  const [activeTab, setActiveTabState] = useState(getActiveTab());
   
   const switchTab = (tab) => {
+    setActiveTabState(tab);
     setActiveTab(tab);
-    localStorage.setItem('barber_activeTab', tab);
   };
   
-  const userName = localStorage.getItem('barber_userName') || 'Proprietário';
-  const avatarLetter = userName.charAt(0).toUpperCase();
+  const userName = getUserName();
+  
+  // Proteção de Rota
+  useEffect(() => {
+    if (!userName) {
+      navigate('/login');
+    }
+  }, [userName, navigate]);
+
+  const avatarLetter = userName ? userName.charAt(0).toUpperCase() : 'P';
 
   const [clients, setClients] = useState([]);
   const [newClient, setNewClient] = useState({ name: '', phone: '' });
@@ -25,42 +35,39 @@ export default function Dashboard() {
   const [editingProductId, setEditingProductId] = useState(null);
   const [editProductData, setEditProductData] = useState({ name: '', qtd: '' });
 
-  useEffect(() => {
-    fetchClients();
-    fetchProducts();
-  }, []);
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/clientes');
-      const data = await response.json();
-      setClients(data);
+      const response = await api.get('/clientes');
+      setClients(response.data);
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
     }
-  }
+  }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/produtos');
-      const data = await response.json();
-      setProducts(data);
+      const response = await api.get('/produtos');
+      setProducts(response.data);
     } catch (error) {
       console.error("Erro ao buscar produtos:", error);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      await fetchClients();
+      await fetchProducts();
+    };
+    init();
+  }, [fetchClients, fetchProducts]);
 
   const handleAddClient = async (e) => {
     e.preventDefault();
     if (!newClient.name || !newClient.phone) return;
 
     try {
-      const res = await fetch('http://localhost:3000/clientes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newClient)
-      });
-      if (res.ok) {
+      const res = await api.post('/clientes', newClient);
+      if (res.status === 201) {
         setNewClient({ name: '', phone: '' });
         fetchClients();
       }
@@ -72,12 +79,8 @@ export default function Dashboard() {
   const handleEditSubmit = async (id) => {
     if (!editFormData.name || !editFormData.phone) return;
     try {
-      const res = await fetch(`http://localhost:3000/clientes/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFormData)
-      });
-      if (res.ok) {
+      const res = await api.put(`/clientes/${id}`, editFormData);
+      if (res.status === 200) {
         setEditingRowId(null);
         fetchClients();
       }
@@ -89,8 +92,8 @@ export default function Dashboard() {
   const handleDeleteClient = async (id) => {
     if (!window.confirm("Deseja realmente excluir este cliente?")) return;
     try {
-      const res = await fetch(`http://localhost:3000/clientes/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchClients();
+      const res = await api.delete(`/clientes/${id}`);
+      if (res.status === 200) fetchClients();
     } catch (error) {
       console.error("Erro ao excluir", error);
     }
@@ -103,12 +106,8 @@ export default function Dashboard() {
     if (!newProduct.name || !newProduct.qtd) return;
     try {
       const status = calculateStatus(newProduct.qtd);
-      const res = await fetch('http://localhost:3000/produtos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newProduct, status })
-      });
-      if (res.ok) {
+      const res = await api.post('/produtos', { ...newProduct, status });
+      if (res.status === 201) {
         setNewProduct({ name: '', qtd: '' });
         fetchProducts();
       }
@@ -121,12 +120,8 @@ export default function Dashboard() {
     if (!editProductData.name || !editProductData.qtd) return;
     try {
       const status = calculateStatus(editProductData.qtd);
-      const res = await fetch(`http://localhost:3000/produtos/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...editProductData, status })
-      });
-      if (res.ok) {
+      const res = await api.put(`/produtos/${id}`, { ...editProductData, status });
+      if (res.status === 200) {
         setEditingProductId(null);
         fetchProducts();
       }
@@ -138,8 +133,8 @@ export default function Dashboard() {
   const handleDeleteProduct = async (id) => {
     if (!window.confirm("Deseja realmente excluir este produto?")) return;
     try {
-      const res = await fetch(`http://localhost:3000/produtos/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchProducts();
+      const res = await api.delete(`/produtos/${id}`);
+      if (res.status === 200) fetchProducts();
     } catch (error) {
       console.error("Erro ao excluir produto", error);
     }
@@ -369,7 +364,7 @@ export default function Dashboard() {
 
         <div className="sidebar-footer">
           <button className="nav-item logout" onClick={() => {
-            localStorage.removeItem('barber_userName');
+            logout();
             navigate('/login');
           }}>
             <LogOut size={20} />
