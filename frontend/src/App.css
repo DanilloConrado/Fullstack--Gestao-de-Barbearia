@@ -1,0 +1,6 @@
+/* Limpo para centralizar a estrutura via modulos ou CSS Global */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
